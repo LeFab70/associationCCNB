@@ -1,0 +1,68 @@
+# Server Configuration
+server.port=8080
+
+# Database Configuration
+# Modifiez ces valeurs selon votre configuration PostgreSQL
+spring.datasource.url=jdbc:postgresql://localhost:5433/association_etudiant_ccnb
+spring.datasource.username=postgres
+spring.datasource.password=YOUR_POSTGRES_PASSWORD
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA Configuration
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.properties.hibernate.format_sql=true
+
+# File Upload Configuration
+spring.servlet.multipart.enabled=true
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+
+# File Storage Configuration
+file.upload-dir=uploads
+
+# Email Configuration (Gmail)
+# IMPORTANT: Pour Gmail, vous devez utiliser un "App Password" et non votre mot de passe principal
+# Pour créer un App Password:
+# 1. Allez sur https://myaccount.google.com/security
+# 2. Activez la validation en 2 étapes si ce n'est pas déjà fait
+# 3. Allez dans "Mots de passe des applications"
+# 4. Créez un nouveau mot de passe pour "Application" > "Autre" > "Association CCNB"
+# 5. Utilisez ce mot de passe généré (16 caractères) dans spring.mail.password ci-dessous
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=YOUR_EMAIL@gmail.com
+spring.mail.password=YOUR_APP_PASSWORD
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+
+# CORS Configuration
+app.cors.allowed-origins=http://localhost:4200
+
+# Swagger/OpenAPI Configuration
+springdoc.api-docs.path=/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.operationsSorter=method
+
+# FTP Configuration
+# Activez/désactivez l'upload FTP (true pour utiliser FTP, false pour stockage local)
+ftp.enabled=true
+# Adresse IP ou hostname du serveur FTP
+ftp.host=YOUR_FTP_HOST
+# Port FTP (généralement 21)
+ftp.port=21
+# Nom d'utilisateur FTP
+ftp.username=YOUR_FTP_USERNAME
+# Mot de passe FTP
+ftp.password=YOUR_FTP_PASSWORD
+# Chemin de base sur le serveur FTP (ex: /public_html/aeccb)
+ftp.base-path=/public_html/aeccb
+# URL de base pour accéder aux fichiers (ex: http://college-dev.com/aeccb)
+ftp.base-url=http://YOUR_DOMAIN.com/aeccb
+# Chemin relatif pour les uploads (sera créé automatiquement si nécessaire)
+ftp.upload-path=uploads
+# Mode passif FTP (recommandé: true)
+ftp.passive-mode=true
+

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/proposals")
@@ -19,38 +20,7 @@ public class ProposalController {
     
     private final ProposalService proposalService;
     
-    @PostMapping
-    public ResponseEntity<ProposalDTO> createProposal(
-            @RequestParam("name") String name,
-            @RequestParam("proposalText") String proposalText,
-            @RequestParam(value = "photo", required = false) MultipartFile photo,
-            HttpServletRequest request) {
-        
-        String voterIp = getClientIpAddress(request);
-        ProposalDTO proposal = proposalService.createProposal(name, proposalText, photo, voterIp);
-        return ResponseEntity.status(HttpStatus.CREATED).body(proposal);
-    }
-    
-    @GetMapping
-    public ResponseEntity<List<ProposalDTO>> getAllProposals(HttpServletRequest request) {
-        String voterIp = getClientIpAddress(request);
-        List<ProposalDTO> proposals = proposalService.getAllProposals(voterIp);
-        return ResponseEntity.ok(proposals);
-    }
-    
-    @PostMapping("/{id}/vote")
-    public ResponseEntity<ProposalDTO> toggleVote(@PathVariable Long id, HttpServletRequest request) {
-        String voterIp = getClientIpAddress(request);
-        ProposalDTO proposal = proposalService.toggleVote(id, voterIp);
-        return ResponseEntity.ok(proposal);
-    }
-    
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProposal(@PathVariable Long id) {
-        proposalService.deleteProposal(id);
-        return ResponseEntity.noContent().build();
-    }
-    
+    // Routes spécifiques AVANT les routes avec path variables et les routes génériques
     @GetMapping("/admin")
     public ResponseEntity<List<ProposalDTO>> getAllProposalsForAdmin(HttpServletRequest request) {
         String voterIp = getClientIpAddress(request);
@@ -67,10 +37,51 @@ public class ProposalController {
         return ResponseEntity.ok(proposals);
     }
     
+    @GetMapping
+    public ResponseEntity<List<ProposalDTO>> getAllProposals(HttpServletRequest request) {
+        String voterIp = getClientIpAddress(request);
+        List<ProposalDTO> proposals = proposalService.getAllProposals(voterIp);
+        return ResponseEntity.ok(proposals);
+    }
+    
+    @PostMapping
+    public ResponseEntity<ProposalDTO> createProposal(
+            @RequestParam("name") String name,
+            @RequestParam("proposalText") String proposalText,
+            @RequestParam(value = "photo", required = false) MultipartFile photo,
+            @RequestParam(value = "photoUrl", required = false) String photoUrl,
+            HttpServletRequest request) {
+        
+        String voterIp = getClientIpAddress(request);
+        ProposalDTO proposal = proposalService.createProposal(name, proposalText, photo, photoUrl, voterIp);
+        return ResponseEntity.status(HttpStatus.CREATED).body(proposal);
+    }
+    
+    @PostMapping("/{id}/vote")
+    public ResponseEntity<ProposalDTO> toggleVote(@PathVariable Long id, HttpServletRequest request) {
+        String voterIp = getClientIpAddress(request);
+        ProposalDTO proposal = proposalService.toggleVote(id, voterIp);
+        return ResponseEntity.ok(proposal);
+    }
+    
     @PutMapping("/{id}/status")
-    public ResponseEntity<Void> toggleProposalStatus(@PathVariable Long id) {
-        proposalService.toggleProposalStatus(id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> toggleProposalStatus(@PathVariable Long id) {
+        try {
+            proposalService.toggleProposalStatus(id);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            if (e.getMessage() != null && e.getMessage().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Proposal not found", "message", e.getMessage()));
+            }
+            throw e;
+        }
+    }
+    
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteProposal(@PathVariable Long id) {
+        proposalService.deleteProposal(id);
+        return ResponseEntity.noContent().build();
     }
     
     private String getClientIpAddress(HttpServletRequest request) {

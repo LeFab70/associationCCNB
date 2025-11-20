@@ -10,5 +10,7 @@ public record ReviewDTO(
     LocalDateTime createdAt,
     Boolean isApproved,
     int likeCount,
-    boolean hasLiked
+    boolean hasLiked,
+    Long activityId,
+    String activityTitle
 ) {}

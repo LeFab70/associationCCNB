@@ -30,6 +30,9 @@ logs/
 .env.local
 .env.*.local
 
+# Application properties (contient des données sensibles)
+backend/src/main/resources/application.properties
+
 # Uploads (ne pas commiter les fichiers uploadés)
 backend/uploads/
 !backend/uploads/.gitkeep
@@ -41,4 +44,8 @@ backend/uploads/
 # Temporary files
 *.tmp
 *.temp
+
+# Markdown files (except README.md at root)
+*.md
+!README.md
 

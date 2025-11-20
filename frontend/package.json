@@ -6,7 +6,9 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "clean": "rm -rf .angular node_modules/.vite dist",
+    "clean:start": "npm run clean && npm start"
   },
   "prettier": {
     "printWidth": 100,

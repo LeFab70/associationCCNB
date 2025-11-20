@@ -35,8 +35,7 @@ public class CommentService {
     
     @Transactional(readOnly = true)
     public List<CommentDTO> getCommentsByReviewId(Long reviewId) {
-        return commentRepository.findAll().stream()
-                .filter(comment -> comment.getReview().getId().equals(reviewId))
+        return commentRepository.findByReviewIdOrderByCreatedAtDesc(reviewId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }

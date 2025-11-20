@@ -24,12 +24,28 @@ public class Admin {
     @Column(nullable = false)
     private String password;
     
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+    
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        if (isActive == null) {
+            isActive = true;
+        }
+    }
+    
+    @PostLoad
+    protected void onLoad() {
+        if (isActive == null) {
+            isActive = true;
+        }
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
     }
 }
 

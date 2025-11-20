@@ -32,6 +32,10 @@ public class Review {
     @Column(name = "is_approved", nullable = false)
     private Boolean isApproved = true;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "activity_id", nullable = false)
+    private Activity activity;
+    
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     

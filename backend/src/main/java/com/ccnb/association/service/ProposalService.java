@@ -22,12 +22,16 @@ public class ProposalService {
     private final FileStorageService fileStorageService;
     
     @Transactional
-    public ProposalDTO createProposal(String name, String proposalText, MultipartFile photo, String voterIp) {
+    public ProposalDTO createProposal(String name, String proposalText, MultipartFile photo, String photoUrl, String voterIp) {
         Proposal proposal = new Proposal();
         proposal.setName(name);
         proposal.setProposalText(proposalText);
         
-        if (photo != null && !photo.isEmpty()) {
+        // Priorité à photoUrl si fourni (fichier déjà uploadé via FTP)
+        if (photoUrl != null && !photoUrl.isEmpty()) {
+            proposal.setPhotoUrl(photoUrl);
+        } else if (photo != null && !photo.isEmpty()) {
+            // Sinon, uploader le fichier
             String fileName = fileStorageService.storeFile(photo);
             proposal.setPhotoUrl(fileName);
         }
@@ -52,7 +56,7 @@ public class ProposalService {
     
     @Transactional(readOnly = true)
     public List<ProposalDTO> searchProposals(String searchTerm, String voterIp) {
-        return proposalRepository.findByNameContainingIgnoreCaseOrProposalTextContainingIgnoreCase(searchTerm, searchTerm).stream()
+        return proposalRepository.findByNameContainingIgnoreCaseOrProposalTextContainingIgnoreCase(searchTerm).stream()
                 .map(proposal -> convertToDTO(proposal, voterIp))
                 .collect(Collectors.toList());
     }
@@ -89,20 +93,31 @@ public class ProposalService {
     @Transactional
     public void toggleProposalStatus(Long id) {
         Proposal proposal = proposalRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Proposal not found"));
-        proposal.setIsActive(!proposal.getIsActive());
+                .orElseThrow(() -> new RuntimeException("Proposal not found with id: " + id));
+        
+        // S'assurer que isActive n'est pas null avant de le modifier
+        Boolean currentStatus = proposal.getIsActive();
+        if (currentStatus == null) {
+            currentStatus = true; // Valeur par défaut
+        }
+        proposal.setIsActive(!currentStatus);
         proposalRepository.save(proposal);
     }
     
     private ProposalDTO convertToDTO(Proposal proposal, String voterIp) {
+        // Utiliser des requêtes directes pour éviter les problèmes de lazy loading
+        Long voteCount = voteRepository.countByProposalId(proposal.getId());
+        Long voteCountForUser = voterIp != null ? voteRepository.countByProposalIdAndVoterIp(proposal.getId(), voterIp) : 0L;
+        boolean hasVoted = voteCountForUser != null && voteCountForUser > 0;
+        
         return new ProposalDTO(
             proposal.getId(),
             proposal.getName(),
             proposal.getProposalText(),
             proposal.getPhotoUrl(),
             proposal.getCreatedAt(),
-            proposal.getVoteCount(),
-            voterIp != null && voteRepository.existsByProposalAndVoterIp(proposal, voterIp),
+            voteCount != null ? voteCount.intValue() : 0,
+            hasVoted,
             proposal.getIsActive()
         );
     }

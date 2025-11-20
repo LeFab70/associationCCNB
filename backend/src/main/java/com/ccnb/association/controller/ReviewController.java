@@ -19,27 +19,43 @@ public class ReviewController {
     
     private final ReviewService reviewService;
     
-    @PostMapping
+    @GetMapping("/activity/{activityId}")
+    public ResponseEntity<List<ReviewDTO>> getReviewsByActivityId(
+            @PathVariable Long activityId,
+            HttpServletRequest request) {
+        String voterIp = getClientIpAddress(request);
+        List<ReviewDTO> reviews = reviewService.getReviewsByActivityId(activityId, voterIp);
+        return ResponseEntity.ok(reviews);
+    }
+    
+    @PostMapping("/activity/{activityId}")
     public ResponseEntity<ReviewDTO> createReview(
+            @PathVariable Long activityId,
             @RequestParam("name") String name,
             @RequestParam("reviewText") String reviewText,
             @RequestParam(value = "photo", required = false) MultipartFile photo) {
         
-        ReviewDTO review = reviewService.createReview(name, reviewText, photo);
+        ReviewDTO review = reviewService.createReview(activityId, name, reviewText, photo);
         return ResponseEntity.status(HttpStatus.CREATED).body(review);
     }
     
-    @GetMapping
-    public ResponseEntity<List<ReviewDTO>> getAllApprovedReviews(HttpServletRequest request) {
-        String voterIp = getClientIpAddress(request);
-        List<ReviewDTO> reviews = reviewService.getAllApprovedReviews(voterIp);
-        return ResponseEntity.ok(reviews);
+    // Endpoint réservé aux admins pour créer des reviews/photos
+    @PostMapping("/admin/activity/{activityId}")
+    public ResponseEntity<ReviewDTO> createReviewAsAdmin(
+            @PathVariable Long activityId,
+            @RequestParam("name") String name,
+            @RequestParam("reviewText") String reviewText,
+            @RequestParam(value = "photo", required = false) MultipartFile photo) {
+        
+        // Les reviews créées par les admins sont automatiquement approuvées
+        ReviewDTO review = reviewService.createReviewAsAdmin(activityId, name, reviewText, photo);
+        return ResponseEntity.status(HttpStatus.CREATED).body(review);
     }
     
     @GetMapping("/admin")
-    public ResponseEntity<List<ReviewDTO>> getAllReviews(HttpServletRequest request) {
+    public ResponseEntity<List<ReviewDTO>> getAllReviewsForAdmin(HttpServletRequest request) {
         String voterIp = getClientIpAddress(request);
-        List<ReviewDTO> reviews = reviewService.getAllReviews(voterIp);
+        List<ReviewDTO> reviews = reviewService.getAllReviewsForAdmin(voterIp);
         return ResponseEntity.ok(reviews);
     }
     
