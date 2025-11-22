@@ -2,6 +2,7 @@ package com.ccnb.association.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,6 +15,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Activity {
     
     @Id
@@ -58,6 +60,9 @@ public class Activity {
     
     @Column(name = "is_published")
     private Boolean isPublished = false; // false = proposée (en attente de vote), true = publiée (confirmée)
+    
+    @Column(name = "voting_deadline")
+    private LocalDateTime votingDeadline; // Date limite pour voter sur les activités proposées
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

@@ -2,6 +2,7 @@ package com.ccnb.association.controller;
 
 import com.ccnb.association.dto.AdminDTO;
 import com.ccnb.association.service.AdminService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,23 +13,45 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"}, allowCredentials = "true")
 public class AdminController {
     
     private final AdminService adminService;
     
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> credentials) {
+    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> credentials, HttpSession session) {
         String username = credentials.get("username");
         String password = credentials.get("password");
         
         boolean authenticated = adminService.authenticate(username, password);
         
         if (authenticated) {
+            // Créer une session pour l'admin connecté
+            session.setAttribute("adminUsername", username);
             return ResponseEntity.ok(Map.of("success", true, "message", "Login successful"));
         } else {
             return ResponseEntity.status(401).body(Map.of("success", false, "message", "Invalid credentials"));
         }
+    }
+    
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout(HttpSession session) {
+        session.invalidate();
+        return ResponseEntity.ok(Map.of("message", "Déconnexion réussie"));
+    }
+    
+    @GetMapping("/check-auth")
+    public ResponseEntity<Map<String, Object>> checkAuth(HttpSession session) {
+        String username = (String) session.getAttribute("adminUsername");
+        
+        if (username != null) {
+            return ResponseEntity.ok(Map.of(
+                "authenticated", true,
+                "username", username
+            ));
+        }
+        
+        return ResponseEntity.ok(Map.of("authenticated", false));
     }
     
     @GetMapping("/accounts")

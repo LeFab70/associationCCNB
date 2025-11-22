@@ -3,6 +3,7 @@ package com.ccnb.association.service;
 import com.ccnb.association.dto.ActivityPhotoCommentDTO;
 import com.ccnb.association.entity.ActivityPhoto;
 import com.ccnb.association.entity.ActivityPhotoComment;
+import com.ccnb.association.exceptions.ResourceNotFoundException;
 import com.ccnb.association.repository.ActivityPhotoCommentRepository;
 import com.ccnb.association.repository.ActivityPhotoRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class ActivityPhotoCommentService {
     @Transactional
     public ActivityPhotoCommentDTO createComment(Long photoId, String name, String commentText) {
         ActivityPhoto photo = photoRepository.findById(photoId)
-                .orElseThrow(() -> new RuntimeException("Activity photo not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Activity photo not found"));
         
         ActivityPhotoComment comment = new ActivityPhotoComment();
         comment.setActivityPhoto(photo);
@@ -59,7 +60,7 @@ public class ActivityPhotoCommentService {
     @Transactional
     public void approveComment(Long commentId) {
         ActivityPhotoComment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new RuntimeException("Comment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
         comment.setIsApproved(true);
         commentRepository.save(comment);
     }
@@ -67,7 +68,7 @@ public class ActivityPhotoCommentService {
     @Transactional
     public void rejectComment(Long commentId) {
         ActivityPhotoComment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new RuntimeException("Comment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
         comment.setIsApproved(false);
         commentRepository.save(comment);
     }

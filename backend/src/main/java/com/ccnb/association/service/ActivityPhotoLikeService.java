@@ -2,6 +2,7 @@ package com.ccnb.association.service;
 
 import com.ccnb.association.entity.ActivityPhoto;
 import com.ccnb.association.entity.ActivityPhotoLike;
+import com.ccnb.association.exceptions.ResourceNotFoundException;
 import com.ccnb.association.repository.ActivityPhotoLikeRepository;
 import com.ccnb.association.repository.ActivityPhotoRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,7 @@ public class ActivityPhotoLikeService {
     @Transactional
     public void toggleLike(Long photoId, String voterIp) {
         ActivityPhoto photo = photoRepository.findById(photoId)
-                .orElseThrow(() -> new RuntimeException("Activity photo not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Activity photo not found"));
         
         if (likeRepository.existsByActivityPhotoAndVoterIp(photo, voterIp)) {
             likeRepository.deleteByActivityPhotoAndVoterIp(photo, voterIp);

@@ -2,6 +2,8 @@ package com.ccnb.association.service;
 
 import com.ccnb.association.dto.AdminDTO;
 import com.ccnb.association.entity.Admin;
+import com.ccnb.association.exceptions.ResourceAlreadyExist;
+import com.ccnb.association.exceptions.ResourceNotFoundException;
 import com.ccnb.association.repository.AdminRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -47,7 +49,7 @@ public class AdminService {
     @Transactional
     public AdminDTO createAdmin(String username, String password) {
         if (adminRepository.findByUsername(username).isPresent()) {
-            throw new RuntimeException("Username already exists");
+            throw new ResourceAlreadyExist("Username already exists");
         }
         
         Admin admin = new Admin();
@@ -69,7 +71,7 @@ public class AdminService {
     @Transactional
     public void toggleAdminStatus(Long id) {
         Admin admin = adminRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
         admin.setIsActive(!admin.getIsActive());
         adminRepository.save(admin);
     }
@@ -77,7 +79,7 @@ public class AdminService {
     @Transactional
     public void changePassword(Long id, String newPassword) {
         Admin admin = adminRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
         admin.setPassword(hashPassword(newPassword));
         adminRepository.save(admin);
     }

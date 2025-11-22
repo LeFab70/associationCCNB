@@ -1,8 +1,12 @@
 package com.ccnb.association.service;
 
+import com.ccnb.association.dto.ActivityDTO;
 import com.ccnb.association.dto.ProposalDTO;
+import com.ccnb.association.entity.Activity;
 import com.ccnb.association.entity.Proposal;
 import com.ccnb.association.entity.Vote;
+import com.ccnb.association.exceptions.ResourceNotFoundException;
+import com.ccnb.association.repository.ActivityRepository;
 import com.ccnb.association.repository.ProposalRepository;
 import com.ccnb.association.repository.VoteRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,6 +25,7 @@ public class ProposalService {
     private final ProposalRepository proposalRepository;
     private final VoteRepository voteRepository;
     private final FileStorageService fileStorageService;
+    private final ActivityRepository activityRepository;
     
     @Transactional
     public ProposalDTO createProposal(String name, String proposalText, MultipartFile photo, String photoUrl, String voterIp) {
@@ -49,7 +55,8 @@ public class ProposalService {
     
     @Transactional(readOnly = true)
     public List<ProposalDTO> getAllProposalsForAdmin(String voterIp) {
-        return proposalRepository.findAllOrderByCreatedAtDesc().stream()
+        // Retourner uniquement les propositions actives (non converties)
+        return proposalRepository.findAllActiveOrderByCreatedAtDesc().stream()
                 .map(proposal -> convertToDTO(proposal, voterIp))
                 .collect(Collectors.toList());
     }
@@ -64,13 +71,13 @@ public class ProposalService {
     @Transactional
     public ProposalDTO toggleVote(Long proposalId, String voterIp) {
         Proposal proposal = proposalRepository.findById(proposalId)
-                .orElseThrow(() -> new RuntimeException("Proposal not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Proposal not found"));
         
         boolean hasVoted = voteRepository.existsByProposalAndVoterIp(proposal, voterIp);
         
         if (hasVoted) {
             Vote vote = voteRepository.findByProposalAndVoterIp(proposal, voterIp)
-                    .orElseThrow(() -> new RuntimeException("Vote not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Vote not found"));
             voteRepository.delete(vote);
         } else {
             Vote vote = new Vote();
@@ -80,7 +87,7 @@ public class ProposalService {
         }
         
         proposal = proposalRepository.findById(proposalId)
-                .orElseThrow(() -> new RuntimeException("Proposal not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Proposal not found"));
         
         return convertToDTO(proposal, voterIp);
     }
@@ -93,7 +100,7 @@ public class ProposalService {
     @Transactional
     public void toggleProposalStatus(Long id) {
         Proposal proposal = proposalRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Proposal not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Proposal not found with id: " + id));
         
         // S'assurer que isActive n'est pas null avant de le modifier
         Boolean currentStatus = proposal.getIsActive();
@@ -102,6 +109,55 @@ public class ProposalService {
         }
         proposal.setIsActive(!currentStatus);
         proposalRepository.save(proposal);
+    }
+    
+    @Transactional
+    public ActivityDTO convertProposalToActivity(Long proposalId, LocalDateTime votingDeadline) {
+        Proposal proposal = proposalRepository.findById(proposalId)
+                .orElseThrow(() -> new ResourceNotFoundException("Proposal not found"));
+        
+        // Créer une activité à partir de la proposition
+        Activity activity = Activity.builder()
+                .title(proposal.getName())
+                .description(proposal.getProposalText())
+                .imageUrl(proposal.getPhotoUrl())
+                .isActive(true)
+                .isPublished(false) // Activité proposée (à voter)
+                .votingDeadline(votingDeadline)
+                .build();
+        
+        Activity savedActivity = activityRepository.save(activity);
+        
+        // Désactiver la proposition pour qu'elle ne soit plus visible
+        proposal.setIsActive(false);
+        proposalRepository.save(proposal);
+        
+        // Convertir en DTO (simplifié, sans voterIp car c'est pour l'admin)
+        return new ActivityDTO(
+            savedActivity.getId(),
+            savedActivity.getTitle(),
+            savedActivity.getDescription(),
+            null, // programme
+            null, // lieu
+            null, // dateActivite
+            null, // heureActivite
+            true, // isFree
+            null, // prix
+            false, // reservationRequired
+            null, // reservationUrl
+            savedActivity.getImageUrl(),
+            savedActivity.getCreatedAt(),
+            0, // likeCount
+            false, // hasLiked
+            savedActivity.getIsActive(),
+            savedActivity.getIsPublished(),
+            List.of(), // photos
+            0, // reviewCount
+            0, // commentCount
+            null, // markedAsPastAt
+            null, // autoDeleteDelayDays
+            savedActivity.getVotingDeadline()
+        );
     }
     
     private ProposalDTO convertToDTO(Proposal proposal, String voterIp) {

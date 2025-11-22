@@ -3,6 +3,7 @@ package com.ccnb.association.service;
 import com.ccnb.association.dto.ReviewDTO;
 import com.ccnb.association.entity.Activity;
 import com.ccnb.association.entity.Review;
+import com.ccnb.association.exceptions.ResourceNotFoundException;
 import com.ccnb.association.repository.ActivityRepository;
 import com.ccnb.association.repository.LikeRepository;
 import com.ccnb.association.repository.ReviewRepository;
@@ -26,7 +27,7 @@ public class ReviewService {
     @Transactional
     public ReviewDTO createReview(Long activityId, String name, String reviewText, MultipartFile photo) {
         Activity activity = activityRepository.findById(activityId)
-                .orElseThrow(() -> new RuntimeException("Activity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Activity not found"));
         
         Review review = new Review();
         review.setActivity(activity);
@@ -46,7 +47,7 @@ public class ReviewService {
     @Transactional
     public ReviewDTO createReviewAsAdmin(Long activityId, String name, String reviewText, MultipartFile photo) {
         Activity activity = activityRepository.findById(activityId)
-                .orElseThrow(() -> new RuntimeException("Activity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Activity not found"));
         
         Review review = new Review();
         review.setActivity(activity);
@@ -90,7 +91,7 @@ public class ReviewService {
     @Transactional
     public void toggleApproval(Long id) {
         Review review = reviewRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Review not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
         review.setIsApproved(!review.getIsApproved());
         reviewRepository.save(review);
     }

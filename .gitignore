@@ -49,3 +49,16 @@ backend/uploads/
 *.md
 !README.md
 
+# SQL scripts (migration/fix scripts - peuvent contenir des données sensibles)
+backend/*.sql
+backend/*.sh
+!backend/schema.sql
+
+# Password reset and sensitive scripts
+backend/add_password_reset_columns.sql
+backend/fix_students_nom_nullable.sql
+backend/fix_students_nom_nullable.sh
+backend/fix_image_urls.sql
+backend/fix_urls_urgent.sql
+backend/add_is_approved_column.sql
+

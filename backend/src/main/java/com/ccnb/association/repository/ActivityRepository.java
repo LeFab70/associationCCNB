@@ -15,7 +15,8 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     List<Activity> findAllPublishedAndActiveOrderByCreatedAtDesc();
     
     // Activités proposées (en attente de vote) - pour les utilisateurs
-    @Query("SELECT a FROM Activity a WHERE (a.isPublished = false OR a.isPublished IS NULL) AND a.isActive = true ORDER BY a.createdAt DESC")
+    // Exclut les activités dont le délai de vote est expiré
+    @Query("SELECT a FROM Activity a WHERE (a.isPublished = false OR a.isPublished IS NULL) AND a.isActive = true AND (a.votingDeadline IS NULL OR a.votingDeadline > CURRENT_TIMESTAMP) ORDER BY a.createdAt DESC")
     List<Activity> findAllProposedAndActiveOrderByCreatedAtDesc();
     
     // Toutes les activités actives - pour les utilisateurs (proposées + publiées)

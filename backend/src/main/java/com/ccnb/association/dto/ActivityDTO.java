@@ -24,6 +24,9 @@ public record ActivityDTO(
     Boolean isPublished,
     List<ActivityPhotoDTO> photos,
     int reviewCount,
-    int commentCount
+    int commentCount,
+    LocalDateTime markedAsPastAt,
+    Integer autoDeleteDelayDays,
+    LocalDateTime votingDeadline
 ) {}
 

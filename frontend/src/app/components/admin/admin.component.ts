@@ -1,6 +1,7 @@
 import { Component, signal, inject, ViewChild, ElementRef, AfterViewInit, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ApiService, Proposal, Review, Contact, Activity, Admin, ActivityPhotoComment } from '../../services/api.service';
 import { LinkifyPipe } from '../../pipes/linkify.pipe';
 import { ToastService } from '../../services/toast.service';
@@ -89,6 +90,16 @@ import type { Chart, ChartConfiguration } from 'chart.js';
                   <i class="material-icons text-sm align-middle">info</i>
                   Identifiants par défaut: <strong>admin</strong> / <strong>admin123</strong>
                 </p>
+              </div>
+
+              <div class="text-center border-t pt-4 mt-4">
+                <button
+                  (click)="switchToStudent()"
+                  class="text-sm text-gray-600 hover:text-ccnb-blue transition flex items-center justify-center gap-1 mx-auto"
+                >
+                  <i class="material-icons text-sm">swap_horiz</i>
+                  <span>Vous êtes étudiant ?</span>
+                </button>
               </div>
             </form>
           </div>
@@ -321,6 +332,51 @@ import type { Chart, ChartConfiguration } from 'chart.js';
                   </div>
                 }
               </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Type d'activité</label>
+                <select 
+                  [(ngModel)]="activityFormData.isPublished" 
+                  name="isPublished" 
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ccnb-blue focus:border-transparent"
+                >
+                  <option [value]="false">Proposée (en attente de vote)</option>
+                  <option [value]="true">Publiée (confirmée)</option>
+                </select>
+              </div>
+              
+              @if (!activityFormData.isPublished) {
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-lg">
+                  <p class="text-sm font-medium text-yellow-800 mb-3">Définir la date limite de vote</p>
+                  <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Date limite</label>
+                      <input 
+                        type="date" 
+                        [(ngModel)]="activityFormData.votingDeadlineDate" 
+                        name="votingDeadlineDate" 
+                        [min]="getTodayDate()"
+                        required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ccnb-blue focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Heure limite</label>
+                      <input 
+                        type="time" 
+                        [(ngModel)]="activityFormData.votingDeadlineTime" 
+                        name="votingDeadlineTime" 
+                        required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ccnb-blue focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <p class="mt-2 text-xs text-yellow-700">
+                    <i class="material-icons text-sm align-middle">info</i>
+                    Après cette date, l'activité ne sera plus visible pour les étudiants si elle n'a pas été votée.
+                  </p>
+                </div>
+              }
               
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Programme détaillé (optionnel)</label>
@@ -1059,15 +1115,19 @@ import type { Chart, ChartConfiguration } from 'chart.js';
               </div>
             </div>
 
-            <!-- Graphique -->
+            <!-- Graphique - Statistiques des votes sur les activités proposées -->
             <div class="bg-white rounded-lg shadow-lg p-6">
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
                 <i class="material-icons text-ccnb-blue">bar_chart</i>
-                Statistiques des votes
+                Statistiques des votes sur les activités proposées
               </h3>
-              <div class="h-64">
-                <canvas #chartCanvas></canvas>
-              </div>
+              @if (proposedActivities().length === 0) {
+                <p class="text-gray-400 text-sm mt-2">Aucune activité proposée pour afficher les statistiques</p>
+              } @else {
+                <div class="h-64">
+                  <canvas #chartCanvas></canvas>
+                </div>
+              }
             </div>
           </div>
 
@@ -1117,6 +1177,13 @@ import type { Chart, ChartConfiguration } from 'chart.js';
                   </div>
                   <div class="flex flex-col gap-2">
                     <button 
+                      (click)="showConvertModal(proposal.id)"
+                      class="px-4 py-2 bg-ccnb-blue text-white rounded-lg hover:bg-ccnb-red transition text-sm flex items-center gap-2"
+                    >
+                      <i class="material-icons text-base">transform</i>
+                      Convertir en activité
+                    </button>
+                    <button 
                       (click)="toggleProposalStatus(proposal.id)"
                       [class.bg-green-500]="!proposal.isActive"
                       [class.bg-gray-500]="proposal.isActive"
@@ -1136,6 +1203,58 @@ import type { Chart, ChartConfiguration } from 'chart.js';
             } @empty {
               <p class="text-gray-500 text-center py-8">Aucune proposition</p>
             }
+          </div>
+        </div>
+      }
+      
+      <!-- Modal de conversion proposition -> activité -->
+      @if (showConvertProposalModal()) {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" (click)="showConvertProposalModal.set(false)">
+          <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4" (click)="$event.stopPropagation()">
+            <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+              <i class="material-icons text-ccnb-blue">transform</i>
+              Convertir en activité proposée
+            </h3>
+            <p class="text-gray-600 mb-4">
+              Cette proposition sera convertie en activité proposée (à voter) et ne sera plus visible dans la liste des propositions.
+            </p>
+            <form (ngSubmit)="convertProposalToActivity()" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Date limite de vote
+                </label>
+                <input
+                  type="date"
+                  [(ngModel)]="votingDeadlineDate"
+                  name="votingDeadlineDate"
+                  required
+                  [min]="getTodayDate()"
+                  class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ccnb-blue mb-2"
+                />
+                <input
+                  type="time"
+                  [(ngModel)]="votingDeadlineTime"
+                  name="votingDeadlineTime"
+                  required
+                  class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ccnb-blue"
+                />
+              </div>
+              <div class="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  (click)="showConvertProposalModal.set(false)"
+                  class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  class="px-4 py-2 bg-ccnb-blue text-white rounded-lg hover:bg-ccnb-red transition"
+                >
+                  Convertir
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       }
@@ -1711,6 +1830,7 @@ export class AdminComponent implements OnInit, AfterViewInit {
   private apiService = inject(ApiService);
   private toastService = inject(ToastService);
   private authService = inject(AuthService);
+  private router = inject(Router);
   
   @ViewChild('chartCanvas') chartCanvas!: ElementRef<HTMLCanvasElement>;
   private chart: Chart | null = null;
@@ -1745,7 +1865,10 @@ export class AdminComponent implements OnInit, AfterViewInit {
     prix: 0,
     reservationRequired: false,
     reservationUrl: '',
-    photo: null as File | null
+    photo: null as File | null,
+    isPublished: false, // false = proposée (à voter), true = publiée (confirmée)
+    votingDeadlineDate: '',
+    votingDeadlineTime: ''
   };
   
   expandedActivities = signal<Set<number>>(new Set());
@@ -1763,6 +1886,12 @@ export class AdminComponent implements OnInit, AfterViewInit {
   showChangePasswordModal = signal(false);
   adminIdToChangePassword: number | null = null;
   newPassword = '';
+  
+  // Proposal to activity conversion
+  showConvertProposalModal = signal(false);
+  proposalIdToConvert: number | null = null;
+  votingDeadlineDate = '';
+  votingDeadlineTime = '';
   
   filteredActivities = computed(() => {
     const activities = this.activities();
@@ -1844,8 +1973,9 @@ export class AdminComponent implements OnInit, AfterViewInit {
   });
 
   constructor() {
-    // Check if already authenticated
-    if (this.authService.checkAuth()) {
+    // Check if already authenticated - checkAuth() is async and returns void
+    // The authentication state will be checked by the guard and isAuthenticated() signal
+    if (this.authService.isAuthenticated()) {
       this.loadData();
     }
   }
@@ -1874,7 +2004,6 @@ export class AdminComponent implements OnInit, AfterViewInit {
     this.apiService.getAllActivitiesForAdmin().subscribe({
       next: (data) => {
         this.activities.set(data);
-        setTimeout(() => this.updateChart(), 100);
       },
       error: (err: any) => {
         console.error('Erreur lors du chargement des activités:', err);
@@ -1920,10 +2049,9 @@ export class AdminComponent implements OnInit, AfterViewInit {
     this.isLoggingIn.set(true);
     this.loginError.set('');
     
-    this.apiService.adminLogin({ username: this.username, password: this.password }).subscribe({
+    this.authService.login(this.username, this.password).subscribe({
       next: (response) => {
         if (response.success) {
-          this.authService.setAuthenticated(true);
           this.toastService.success('Connexion réussie !');
           this.loadData();
         } else {
@@ -1950,8 +2078,20 @@ export class AdminComponent implements OnInit, AfterViewInit {
     });
   }
 
+  switchToStudent() {
+    this.router.navigate(['/login']);
+  }
+
   logout() {
-    this.authService.logout();
+    this.authService.logout().subscribe({
+      next: () => {
+        this.toastService.success('Déconnexion réussie - À bientôt !');
+      },
+      error: () => {
+        // Même en cas d'erreur, on déconnecte localement
+        this.toastService.info('Déconnexion - À bientôt !');
+      }
+    });
     this.username = '';
     this.password = '';
     this.toastService.info('Vous avez été déconnecté');
@@ -1961,11 +2101,11 @@ export class AdminComponent implements OnInit, AfterViewInit {
     this.apiService.getAllProposalsForAdmin().subscribe({
       next: (data) => {
         this.proposals.set(data);
-        this.updateChart();
+        // Le chart sera mis à jour après le chargement des activités proposées
       },
       error: (err) => {
         console.error('Erreur:', err);
-        this.toastService.error('Erreur lors du chargement des activités');
+        this.toastService.error('Erreur lors du chargement des propositions');
       }
     });
   }
@@ -2079,7 +2219,8 @@ export class AdminComponent implements OnInit, AfterViewInit {
   }
 
   // Sélection multiple de photos
-  togglePhotoSelection(activityId: number, photoId: number) {
+  togglePhotoSelection(activityId: number, photoId: number | undefined) {
+    if (photoId === undefined) return;
     if (!this.selectedPhotosForDeletion.has(activityId)) {
       this.selectedPhotosForDeletion.set(activityId, new Set());
     }
@@ -2092,7 +2233,8 @@ export class AdminComponent implements OnInit, AfterViewInit {
     this.selectedPhotosForDeletion.set(activityId, new Set(selected));
   }
 
-  isPhotoSelected(activityId: number, photoId: number): boolean {
+  isPhotoSelected(activityId: number, photoId: number | undefined): boolean {
+    if (photoId === undefined) return false;
     return this.selectedPhotosForDeletion.get(activityId)?.has(photoId) || false;
   }
 
@@ -2546,6 +2688,12 @@ export class AdminComponent implements OnInit, AfterViewInit {
     if (this.activityFormData.reservationRequired && this.activityFormData.reservationUrl) {
       formData.append('reservationUrl', this.activityFormData.reservationUrl);
     }
+    formData.append('isPublished', String(this.activityFormData.isPublished || false));
+    // Ajouter le délai de vote si l'activité est proposée (non publiée)
+    if (!this.activityFormData.isPublished && this.activityFormData.votingDeadlineDate && this.activityFormData.votingDeadlineTime) {
+      const deadline = `${this.activityFormData.votingDeadlineDate}T${this.activityFormData.votingDeadlineTime}:00`;
+      formData.append('votingDeadline', deadline);
+    }
     if (this.activityFormData.photo) {
       formData.append('image', this.activityFormData.photo);
     }
@@ -2567,7 +2715,10 @@ export class AdminComponent implements OnInit, AfterViewInit {
           prix: 0,
           reservationRequired: false,
           reservationUrl: '',
-          photo: null 
+          photo: null,
+          isPublished: false,
+          votingDeadlineDate: '',
+          votingDeadlineTime: ''
         };
         this.activitySelectedFile = null;
         this.activitySelectedPhotos = [];
@@ -2643,19 +2794,86 @@ export class AdminComponent implements OnInit, AfterViewInit {
       }
     });
   }
+  
+  showConvertModal(proposalId: number) {
+    this.proposalIdToConvert = proposalId;
+    // Définir la date par défaut à 7 jours à partir d'aujourd'hui
+    const defaultDate = new Date();
+    defaultDate.setDate(defaultDate.getDate() + 7);
+    this.votingDeadlineDate = defaultDate.toISOString().split('T')[0];
+    this.votingDeadlineTime = '23:59';
+    this.showConvertProposalModal.set(true);
+  }
+  
+  convertProposalToActivity() {
+    if (!this.proposalIdToConvert || !this.votingDeadlineDate || !this.votingDeadlineTime) {
+      this.toastService.error('Veuillez remplir tous les champs');
+      return;
+    }
+    
+    const deadline = `${this.votingDeadlineDate}T${this.votingDeadlineTime}:00`;
+    
+    this.apiService.convertProposalToActivity(this.proposalIdToConvert, deadline).subscribe({
+      next: () => {
+        this.toastService.success('Proposition convertie en activité proposée avec succès');
+        this.showConvertProposalModal.set(false);
+        this.proposalIdToConvert = null;
+        this.votingDeadlineDate = '';
+        this.votingDeadlineTime = '';
+        this.loadProposals();
+        this.loadActivities();
+        setTimeout(() => this.updateChart(), 200);
+      },
+      error: (err) => {
+        console.error('Erreur lors de la conversion:', err);
+        this.toastService.error('Erreur lors de la conversion de la proposition');
+      }
+    });
+  }
+  
+  getTodayDate(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+  
+  getTimeRemaining(deadline: string | undefined): string {
+    if (!deadline) return '';
+    const now = new Date();
+    const deadlineDate = new Date(deadline);
+    const diff = deadlineDate.getTime() - now.getTime();
+    
+    if (diff <= 0) return 'Expiré';
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) {
+      return `${days}j ${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${minutes}m`;
+    }
+  }
+  
+  isDeadlinePassed(deadline: string | undefined): boolean {
+    if (!deadline) return false;
+    return new Date(deadline) <= new Date();
+  }
 
   updateChart() {
     if (!this.chartCanvas?.nativeElement) return;
     
-    const proposals = this.proposals();
-    if (proposals.length === 0) return;
+    // Utiliser les activités proposées au lieu des propositions
+    const proposedActivities = this.proposedActivities();
+    if (proposedActivities.length === 0) return;
     
-    const sortedProposals = [...proposals]
-      .sort((a, b) => b.voteCount - a.voteCount)
+    const sortedActivities = [...proposedActivities]
+      .sort((a, b) => b.likeCount - a.likeCount)
       .slice(0, 10); // Top 10
     
-    const labels = sortedProposals.map(p => p.name.length > 20 ? p.name.substring(0, 20) + '...' : p.name);
-    const data = sortedProposals.map(p => p.voteCount);
+    const labels = sortedActivities.map(a => a.title.length > 20 ? a.title.substring(0, 20) + '...' : a.title);
+    const data = sortedActivities.map(a => a.likeCount);
     
     ChartService.destroyChart(this.chart);
     

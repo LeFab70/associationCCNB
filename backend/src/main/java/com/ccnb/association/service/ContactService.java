@@ -2,6 +2,7 @@ package com.ccnb.association.service;
 
 import com.ccnb.association.dto.ContactDTO;
 import com.ccnb.association.entity.Contact;
+import com.ccnb.association.exceptions.ResourceNotFoundException;
 import com.ccnb.association.repository.ContactRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
@@ -44,7 +45,7 @@ public class ContactService {
     @Transactional
     public void markAsRead(Long id) {
         Contact contact = contactRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Contact not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Contact not found"));
         contact.setIsRead(true);
         contactRepository.save(contact);
     }

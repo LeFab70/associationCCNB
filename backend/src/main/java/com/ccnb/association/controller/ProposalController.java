@@ -1,14 +1,17 @@
 package com.ccnb.association.controller;
 
+import com.ccnb.association.dto.ActivityDTO;
 import com.ccnb.association.dto.ProposalDTO;
 import com.ccnb.association.service.ProposalService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -82,6 +85,14 @@ public class ProposalController {
     public ResponseEntity<Void> deleteProposal(@PathVariable Long id) {
         proposalService.deleteProposal(id);
         return ResponseEntity.noContent().build();
+    }
+    
+    @PostMapping("/{id}/convert-to-activity")
+    public ResponseEntity<ActivityDTO> convertProposalToActivity(
+            @PathVariable Long id,
+            @RequestParam("votingDeadline") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime votingDeadline) {
+        ActivityDTO activity = proposalService.convertProposalToActivity(id, votingDeadline);
+        return ResponseEntity.status(HttpStatus.CREATED).body(activity);
     }
     
     private String getClientIpAddress(HttpServletRequest request) {

@@ -1,4 +1,4 @@
-import { Component, signal, inject, computed } from '@angular/core';
+import { Component, signal, inject, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -168,10 +168,41 @@ import { LinkifyPipe } from '../../pipes/linkify.pipe';
               <!-- Contenu -->
               <div class="p-6 flex-1 flex flex-col">
                 <h3 class="text-xl font-bold text-gray-800 mb-2 transition-all duration-200 hover:text-ccnb-blue">{{ activity.title }}</h3>
-                <p class="text-sm text-gray-500 mb-3 flex items-center gap-1">
-                  <i class="material-icons text-xs">access_time</i>
-                  {{ activity.createdAt | date:'short' }}
-                </p>
+                
+                <!-- Informations importantes -->
+                <div class="flex flex-wrap items-center gap-2 text-sm text-gray-600 mb-3 pb-3 border-b border-gray-200">
+                  @if (activity.lieu) {
+                    <span class="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg">
+                      <i class="material-icons text-xs text-ccnb-blue">location_on</i>
+                      <span class="font-medium">{{ activity.lieu }}</span>
+                    </span>
+                  }
+                  @if (activity.dateActivite) {
+                    <span class="flex items-center gap-1 bg-green-50 px-2 py-1 rounded-lg">
+                      <i class="material-icons text-xs text-green-600">calendar_today</i>
+                      <span class="font-medium">{{ activity.dateActivite | date:'shortDate' }}</span>
+                    </span>
+                  }
+                  @if (activity.heureActivite) {
+                    <span class="flex items-center gap-1 bg-purple-50 px-2 py-1 rounded-lg">
+                      <i class="material-icons text-xs text-purple-600">schedule</i>
+                      <span class="font-medium">{{ activity.heureActivite }}</span>
+                    </span>
+                  }
+                  @if (activity.isFree !== undefined) {
+                    <span class="flex items-center gap-1 px-2 py-1 rounded-lg"
+                          [class.bg-green-50]="activity.isFree"
+                          [class.bg-red-50]="!activity.isFree">
+                      <i class="material-icons text-xs" [class.text-green-600]="activity.isFree" [class.text-red-600]="!activity.isFree">
+                        {{ activity.isFree ? 'money_off' : 'attach_money' }}
+                      </i>
+                      <span class="font-medium" [class.text-green-600]="activity.isFree" [class.text-red-600]="!activity.isFree">
+                        {{ activity.isFree ? 'Gratuit' : (activity.prix ? activity.prix + '$' : 'Payant') }}
+                      </span>
+                    </span>
+                  }
+                </div>
+                
                 <div class="text-gray-700 mb-4 whitespace-pre-wrap line-clamp-3 flex-1" [innerHTML]="activity.description | linkify"></div>
                 
                 <!-- Like Button, Commentaires et Avis -->
@@ -312,37 +343,62 @@ import { LinkifyPipe } from '../../pipes/linkify.pipe';
               <!-- Contenu -->
               <div class="p-6 flex-1 flex flex-col bg-gradient-to-b from-white to-yellow-50">
                 <h3 class="text-xl font-bold text-gray-800 mb-2 transition-all duration-200 hover:text-ccnb-blue group-hover:scale-105 transform inline-block">{{ activity.title }}</h3>
+                
+                <!-- Informations importantes -->
+                <div class="flex flex-wrap items-center gap-2 text-sm text-gray-600 mb-3 pb-3 border-b border-gray-200">
+                  @if (activity.lieu) {
+                    <span class="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg">
+                      <i class="material-icons text-xs text-ccnb-blue">location_on</i>
+                      <span class="font-medium">{{ activity.lieu }}</span>
+                    </span>
+                  }
+                  @if (activity.dateActivite) {
+                    <span class="flex items-center gap-1 bg-green-50 px-2 py-1 rounded-lg">
+                      <i class="material-icons text-xs text-green-600">calendar_today</i>
+                      <span class="font-medium">{{ activity.dateActivite | date:'shortDate' }}</span>
+                    </span>
+                  }
+                  @if (activity.heureActivite) {
+                    <span class="flex items-center gap-1 bg-purple-50 px-2 py-1 rounded-lg">
+                      <i class="material-icons text-xs text-purple-600">schedule</i>
+                      <span class="font-medium">{{ activity.heureActivite }}</span>
+                    </span>
+                  }
+                  @if (activity.isFree !== undefined) {
+                    <span class="flex items-center gap-1 px-2 py-1 rounded-lg"
+                          [class.bg-green-50]="activity.isFree"
+                          [class.bg-red-50]="!activity.isFree">
+                      <i class="material-icons text-xs" [class.text-green-600]="activity.isFree" [class.text-red-600]="!activity.isFree">
+                        {{ activity.isFree ? 'money_off' : 'attach_money' }}
+                      </i>
+                      <span class="font-medium" [class.text-green-600]="activity.isFree" [class.text-red-600]="!activity.isFree">
+                        {{ activity.isFree ? 'Gratuit' : (activity.prix ? activity.prix + '$' : 'Payant') }}
+                      </span>
+                    </span>
+                  }
+                </div>
+                
                 <p class="text-gray-600 text-sm mb-4 flex-1 line-clamp-3 leading-relaxed" [innerHTML]="activity.description | linkify"></p>
                 
-                <!-- Informations supplémentaires -->
-                @if (activity.dateActivite || activity.lieu || activity.isFree !== undefined) {
-                  <div class="flex flex-wrap items-center gap-3 text-sm text-gray-500 mb-4 pb-3 border-b border-gray-200">
-                    @if (activity.dateActivite) {
-                      <span class="flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded-lg">
-                        <i class="material-icons text-sm text-ccnb-blue">calendar_today</i>
-                        <span class="font-medium">{{ activity.dateActivite | date:'short' }}</span>
-                      </span>
-                    }
-                    @if (activity.lieu) {
-                      <span class="flex items-center gap-1.5 bg-orange-50 px-2 py-1 rounded-lg">
-                        <i class="material-icons text-sm text-orange-600">location_on</i>
-                        <span class="font-medium">{{ activity.lieu }}</span>
-                      </span>
-                    }
-                    @if (activity.isFree !== undefined) {
-                      <span class="flex items-center gap-1.5 px-2 py-1 rounded-lg"
-                            [class.bg-green-50]="activity.isFree"
-                            [class.bg-red-50]="!activity.isFree">
-                        <i class="material-icons text-sm" [class.text-green-600]="activity.isFree" [class.text-red-600]="!activity.isFree">
-                          {{ activity.isFree ? 'check_circle' : 'attach_money' }}
-                        </i>
-                        <span class="font-medium" [class.text-green-600]="activity.isFree" [class.text-red-600]="!activity.isFree">
-                          {{ activity.isFree ? 'Gratuit' : (activity.prix ? activity.prix + '$' : 'Payant') }}
+                <!-- Compte à rebours pour les activités proposées - TOUJOURS AFFICHÉ -->
+                <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 mb-4 rounded-lg shadow-sm flex items-center gap-2 animate-pulse-slow">
+                  <i class="material-icons text-xl animate-spin-slow">timer</i>
+                  <div class="flex-1">
+                    @if (activity.votingDeadline) {
+                      <p class="text-xs font-semibold">Date limite de vote:</p>
+                      <p class="text-xs">{{ activity.votingDeadline | date:'short' }}</p>
+                      <p class="text-xs font-bold mt-1">
+                        Temps restant: 
+                        <span class="text-yellow-900 font-mono">
+                          {{ getCountdownForActivity(activity.id) || getTimeRemaining(activity.votingDeadline) || 'Calcul...' }}
                         </span>
-                      </span>
+                      </p>
+                    } @else {
+                      <p class="text-xs font-semibold">Aucune date limite de vote définie</p>
+                      <p class="text-xs text-yellow-600">Cette activité est en attente de vote</p>
                     }
                   </div>
-                }
+                </div>
                 
                 <!-- Statistiques en bas -->
                 <div class="flex items-center justify-between pt-3">
@@ -448,10 +504,41 @@ import { LinkifyPipe } from '../../pipes/linkify.pipe';
               <!-- Contenu -->
               <div class="p-6 flex-1 flex flex-col">
                 <h3 class="text-xl font-bold text-gray-800 mb-2 transition-all duration-200 hover:text-ccnb-blue">{{ activity.title }}</h3>
-                <p class="text-sm text-gray-500 mb-3 flex items-center gap-1">
-                  <i class="material-icons text-xs">access_time</i>
-                  {{ activity.createdAt | date:'short' }}
-                </p>
+                
+                <!-- Informations importantes -->
+                <div class="flex flex-wrap items-center gap-2 text-sm text-gray-600 mb-3 pb-3 border-b border-gray-200">
+                  @if (activity.lieu) {
+                    <span class="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg">
+                      <i class="material-icons text-xs text-ccnb-blue">location_on</i>
+                      <span class="font-medium">{{ activity.lieu }}</span>
+                    </span>
+                  }
+                  @if (activity.dateActivite) {
+                    <span class="flex items-center gap-1 bg-green-50 px-2 py-1 rounded-lg">
+                      <i class="material-icons text-xs text-green-600">calendar_today</i>
+                      <span class="font-medium">{{ activity.dateActivite | date:'shortDate' }}</span>
+                    </span>
+                  }
+                  @if (activity.heureActivite) {
+                    <span class="flex items-center gap-1 bg-purple-50 px-2 py-1 rounded-lg">
+                      <i class="material-icons text-xs text-purple-600">schedule</i>
+                      <span class="font-medium">{{ activity.heureActivite }}</span>
+                    </span>
+                  }
+                  @if (activity.isFree !== undefined) {
+                    <span class="flex items-center gap-1 px-2 py-1 rounded-lg"
+                          [class.bg-green-50]="activity.isFree"
+                          [class.bg-red-50]="!activity.isFree">
+                      <i class="material-icons text-xs" [class.text-green-600]="activity.isFree" [class.text-red-600]="!activity.isFree">
+                        {{ activity.isFree ? 'money_off' : 'attach_money' }}
+                      </i>
+                      <span class="font-medium" [class.text-green-600]="activity.isFree" [class.text-red-600]="!activity.isFree">
+                        {{ activity.isFree ? 'Gratuit' : (activity.prix ? activity.prix + '$' : 'Payant') }}
+                      </span>
+                    </span>
+                  }
+                </div>
+                
                 <div class="text-gray-700 mb-4 whitespace-pre-wrap line-clamp-3 flex-1" [innerHTML]="activity.description | linkify"></div>
                 
                 <!-- Informations sur les photos -->
@@ -499,7 +586,7 @@ import { LinkifyPipe } from '../../pipes/linkify.pipe';
     </div>
   `,
 })
-export class ActivitiesComponent {
+export class ActivitiesComponent implements OnInit, OnDestroy {
   private apiService = inject(ApiService);
   private toastService = inject(ToastService);
 
@@ -515,21 +602,108 @@ export class ActivitiesComponent {
   searchTitle = signal<string>('');
   searchDate = signal<string>('');
   
+  // Compteur de vote (pour mise à jour en temps réel)
+  countdownValues = signal<Map<number, string>>(new Map());
+  private countdownIntervals: Map<number, any> = new Map();
+  
   // Activités filtrées
   filteredPublishedActivities = computed(() => {
     return this.filterActivities(this.publishedActivities(), this.searchTitle(), this.searchDate());
   });
   
   filteredProposedActivities = computed(() => {
-    return this.filterActivities(this.proposedActivities(), this.searchTitle(), this.searchDate());
+    const activities = this.filterActivities(this.proposedActivities(), this.searchTitle(), this.searchDate());
+    // Démarrer les compteurs pour les activités avec votingDeadline (dans un setTimeout pour éviter les problèmes de timing)
+    setTimeout(() => {
+      activities.forEach(activity => {
+        if (activity.votingDeadline && !this.countdownIntervals.has(activity.id)) {
+          this.startCountdownForActivity(activity.id, activity.votingDeadline);
+        }
+      });
+    }, 0);
+    return activities;
   });
   
   filteredPastActivities = computed(() => {
     return this.filterActivities(this.pastActivities(), this.searchTitle(), this.searchDate());
   });
 
-  constructor() {
+  ngOnInit() {
     this.loadActivities();
+  }
+  
+  ngOnDestroy() {
+    // Nettoyer tous les intervalles
+    this.countdownIntervals.forEach(interval => clearInterval(interval));
+    this.countdownIntervals.clear();
+  }
+  
+  startCountdownForActivity(activityId: number, deadline: string) {
+    // Nettoyer l'intervalle existant si présent
+    if (this.countdownIntervals.has(activityId)) {
+      clearInterval(this.countdownIntervals.get(activityId));
+    }
+    
+    const updateCountdown = () => {
+      const now = new Date();
+      const deadlineDate = new Date(deadline);
+      const diff = deadlineDate.getTime() - now.getTime();
+      
+      if (diff <= 0) {
+        if (this.countdownIntervals.has(activityId)) {
+          clearInterval(this.countdownIntervals.get(activityId));
+          this.countdownIntervals.delete(activityId);
+        }
+        this.countdownValues.update(values => {
+          const newValues = new Map(values);
+          newValues.set(activityId, 'Expiré');
+          return newValues;
+        });
+        return;
+      }
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      let timeString = '';
+      if (days > 0) {
+        timeString = `${days}j ${hours}h ${minutes}m ${seconds}s`;
+      } else if (hours > 0) {
+        timeString = `${hours}h ${minutes}m ${seconds}s`;
+      } else if (minutes > 0) {
+        timeString = `${minutes}m ${seconds}s`;
+      } else {
+        timeString = `${seconds}s`;
+      }
+      
+      this.countdownValues.update(values => {
+        const newValues = new Map(values);
+        newValues.set(activityId, timeString);
+        return newValues;
+      });
+    };
+    
+    // Mise à jour immédiate
+    updateCountdown();
+    
+    // Puis toutes les secondes
+    const interval = setInterval(updateCountdown, 1000);
+    this.countdownIntervals.set(activityId, interval);
+  }
+  
+  // Méthode pour forcer le démarrage des compteurs après le chargement
+  private startAllCountdowns() {
+    this.proposedActivities().forEach(activity => {
+      if (activity.votingDeadline && !this.countdownIntervals.has(activity.id)) {
+        this.startCountdownForActivity(activity.id, activity.votingDeadline);
+      }
+    });
+  }
+  
+  getCountdownForActivity(activityId: number): string {
+    return this.countdownValues().get(activityId) || '';
   }
 
   loadActivities() {
@@ -549,7 +723,20 @@ export class ActivitiesComponent {
     // Charger les activités proposées (en attente de vote) progressivement
     this.apiService.getProposedActivities().subscribe({
       next: (data) => {
+        console.log('Activités proposées chargées:', data);
+        console.log('Activités avec votingDeadline:', data.filter(a => a.votingDeadline));
         this.isLoadingProposed.set(false);
+        // Charger toutes les activités d'abord (sans délai progressif pour les compteurs)
+        this.proposedActivities.set(data);
+        // Démarrer tous les compteurs immédiatement
+        data.forEach(activity => {
+          console.log(`Activité ${activity.id}: votingDeadline =`, activity.votingDeadline);
+          if (activity.votingDeadline && !this.countdownIntervals.has(activity.id)) {
+            console.log(`Démarrage du compteur pour l'activité ${activity.id}`);
+            this.startCountdownForActivity(activity.id, activity.votingDeadline);
+          }
+        });
+        // Puis charger progressivement pour l'animation visuelle
         this.loadActivitiesProgressively(data, this.proposedActivities, 100);
       },
       error: (err) => {
@@ -581,7 +768,17 @@ export class ActivitiesComponent {
     targetSignal.set([]);
     activities.forEach((activity, index) => {
       setTimeout(() => {
-        targetSignal.update(current => [...current, activity]);
+        targetSignal.update(current => {
+          const updated = [...current, activity];
+          // Démarrer le compteur pour les activités proposées avec votingDeadline
+          if (targetSignal === this.proposedActivities && activity.votingDeadline && !this.countdownIntervals.has(activity.id)) {
+            // Démarrer le compteur immédiatement
+            setTimeout(() => {
+              this.startCountdownForActivity(activity.id, activity.votingDeadline!);
+            }, 50);
+          }
+          return updated;
+        });
       }, index * delayMs);
     });
   }
@@ -698,12 +895,45 @@ export class ActivitiesComponent {
 
   handleImageError(event: Event) {
     const img = event.target as HTMLImageElement;
-    console.error('Erreur de chargement d\'image:', img.src);
-    console.error('URL complète:', img.src);
-    img.style.display = 'none';
+    const originalSrc = img.src;
+
+    // Ignorer les URLs externes (comme Unsplash)
+    if (originalSrc.startsWith('https://images.unsplash.com')) {
+      console.warn('Ignoring image loading error for external URL:', originalSrc);
+      img.style.display = 'none';
+      return;
+    }
+
+    console.error('Erreur de chargement d\'image:', originalSrc);
     
-    // Afficher un toast pour informer l'utilisateur
-    this.toastService.error(`Impossible de charger l'image: ${img.src}`);
+    // Afficher une image placeholder locale
+    img.onerror = null; // Éviter les boucles infinies
+    img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="18" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EImage non disponible%3C/text%3E%3C/svg%3E';
+    img.style.display = 'block';
+  }
+  
+  getTimeRemaining(deadline: string | undefined): string {
+    if (!deadline) return '';
+    const now = new Date();
+    const deadlineDate = new Date(deadline);
+    const diff = deadlineDate.getTime() - now.getTime();
+    
+    if (diff <= 0) return 'Expiré';
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    if (days > 0) {
+      return `${days}j ${hours}h ${minutes}m ${seconds}s`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
   }
   
   // Méthodes de recherche

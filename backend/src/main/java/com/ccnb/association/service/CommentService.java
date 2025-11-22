@@ -3,6 +3,7 @@ package com.ccnb.association.service;
 import com.ccnb.association.dto.CommentDTO;
 import com.ccnb.association.entity.Comment;
 import com.ccnb.association.entity.Review;
+import com.ccnb.association.exceptions.ResourceNotFoundException;
 import com.ccnb.association.repository.CommentRepository;
 import com.ccnb.association.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class CommentService {
     @Transactional
     public CommentDTO createComment(Long reviewId, String name, String commentText) {
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Review not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
         
         Comment comment = new Comment();
         comment.setReview(review);

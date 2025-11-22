@@ -106,6 +106,8 @@ public class ActivityController {
             @RequestParam(value = "prix", required = false) Double prix,
             @RequestParam(value = "reservationRequired", required = false) Boolean reservationRequired,
             @RequestParam(value = "reservationUrl", required = false) String reservationUrl,
+            @RequestParam(value = "isPublished", required = false) Boolean isPublished,
+            @RequestParam(value = "votingDeadline", required = false) String votingDeadline,
             @RequestParam(value = "image", required = false) MultipartFile image,
             @RequestParam(value = "imageUrl", required = false) String imageUrl,
             @RequestParam(value = "photos", required = false) List<MultipartFile> photos) {
@@ -119,9 +121,18 @@ public class ActivityController {
             }
         }
         
+        java.time.LocalDateTime deadline = null;
+        if (votingDeadline != null && !votingDeadline.isEmpty()) {
+            try {
+                deadline = java.time.LocalDateTime.parse(votingDeadline);
+            } catch (Exception e) {
+                // Ignore parsing errors
+            }
+        }
+        
         ActivityDTO activity = activityService.createActivity(title, description, programme, lieu, 
                 date, heureActivite, isFree, prix, reservationRequired, reservationUrl, 
-                image, imageUrl, photos);
+                isPublished, deadline, image, imageUrl, photos);
         return ResponseEntity.status(HttpStatus.CREATED).body(activity);
     }
     

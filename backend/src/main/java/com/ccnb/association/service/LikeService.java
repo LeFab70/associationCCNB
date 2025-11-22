@@ -2,6 +2,7 @@ package com.ccnb.association.service;
 
 import com.ccnb.association.entity.Like;
 import com.ccnb.association.entity.Review;
+import com.ccnb.association.exceptions.ResourceNotFoundException;
 import com.ccnb.association.repository.LikeRepository;
 import com.ccnb.association.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,7 @@ public class LikeService {
     @Transactional
     public void toggleLike(Long reviewId, String voterIp) {
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Review not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
         
         if (likeRepository.existsByReviewAndVoterIp(review, voterIp)) {
             likeRepository.deleteByReviewAndVoterIp(review, voterIp);

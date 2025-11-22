@@ -1,8 +1,8 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { ApiService, Activity, Review, Comment, ActivityPhotoComment } from '../../services/api.service';
+import { ApiService, Activity, Review, Comment, ActivityPhotoComment, ActivityPhoto } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { LinkifyPipe } from '../../pipes/linkify.pipe';
 
@@ -152,6 +152,18 @@ import { LinkifyPipe } from '../../pipes/linkify.pipe';
             <h1 class="text-4xl font-bold text-ccnb-blue mb-4">{{ activity()!.title }}</h1>
             <p class="text-sm text-gray-500 mb-6">{{ activity()!.createdAt | date:'short' }}</p>
             <div class="text-gray-700 whitespace-pre-wrap mb-6 text-lg" [innerHTML]="activity()!.description | linkify"></div>
+            
+            <!-- Compte à rebours pour les activités proposées -->
+            @if (!activity()!.isPublished && activity()!.votingDeadline) {
+              <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-lg shadow-md flex items-center gap-3 animate-pulse-slow">
+                <i class="material-icons text-3xl">timer</i>
+                <div>
+                  <p class="font-bold text-lg">Date limite de vote:</p>
+                  <p class="text-sm">{{ activity()!.votingDeadline | date:'fullDate' }} à {{ activity()!.votingDeadline | date:'shortTime' }}</p>
+                  <p class="text-sm font-semibold mt-1">Temps restant: {{ countdown() }}</p>
+                </div>
+              </div>
+            }
             
             <!-- Like/Vote Button -->
             <div class="flex items-center gap-4 pt-6 border-t">
@@ -346,7 +358,7 @@ import { LinkifyPipe } from '../../pipes/linkify.pipe';
     </div>
   `,
 })
-export class ActivityDetailComponent implements OnInit {
+export class ActivityDetailComponent implements OnInit, OnDestroy {
   private apiService = inject(ApiService);
   private toastService = inject(ToastService);
   private route = inject(ActivatedRoute);
@@ -359,6 +371,8 @@ export class ActivityDetailComponent implements OnInit {
   photoCommentForms: Record<number, { name: string; commentText: string }> = {};
   isSubmitting = signal(false);
   currentPhotoIndex = signal(0);
+  countdown = signal<string>('');
+  private countdownInterval: any;
 
   reviewFormData = {
     name: '',
@@ -391,12 +405,48 @@ export class ActivityDetailComponent implements OnInit {
             }
           });
         }
+        // Démarrer le compteur si l'activité est proposée et a un délai de vote
+        if (!data.isPublished && data.votingDeadline) {
+          this.startCountdown(data.votingDeadline);
+        }
       },
       error: (err) => {
         console.error('Erreur lors du chargement de l\'activité:', err);
         this.toastService.error('Erreur lors du chargement de l\'activité');
       }
     });
+  }
+  
+  ngOnDestroy() {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
+  }
+  
+  startCountdown(deadline: string) {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
+    const targetDate = new Date(deadline).getTime();
+
+    this.countdownInterval = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+
+      if (distance < 0) {
+        clearInterval(this.countdownInterval);
+        this.countdown.set('Vote terminé');
+        this.loadActivity(this.activity()!.id); // Recharger l'activité pour refléter le statut
+        return;
+      }
+
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      this.countdown.set(`${days}j ${hours}h ${minutes}m ${seconds}s`);
+    }, 1000);
   }
   
   loadPhotoComments(photoId: number) {
@@ -556,20 +606,28 @@ export class ActivityDetailComponent implements OnInit {
     this.toastService.error(`Impossible de charger l'image: ${img.src}`);
   }
 
-  getAllPhotos(): Array<{ id?: number; photoUrl: string; displayOrder?: number }> {
+  getAllPhotos(): ActivityPhoto[] {
     const activityData = this.activity();
     if (!activityData) return [];
     
-    const photos: Array<{ id?: number; photoUrl: string; displayOrder?: number }> = [];
+    const photos: ActivityPhoto[] = [];
     
     // Ajouter la photo principale si elle existe
     if (activityData.imageUrl) {
-      photos.push({ photoUrl: activityData.imageUrl, displayOrder: -1 });
+      photos.push({ 
+        id: undefined,
+        photoUrl: activityData.imageUrl, 
+        displayOrder: -1,
+        createdAt: activityData.createdAt || '',
+        likeCount: 0,
+        hasLiked: false,
+        commentCount: 0
+      });
     }
     
     // Ajouter les photos supplémentaires
     if (activityData.photos && activityData.photos.length > 0) {
-      photos.push(...activityData.photos.map(p => ({ id: p.id, photoUrl: p.photoUrl, displayOrder: p.displayOrder })));
+      photos.push(...activityData.photos);
     }
     
     // Trier par displayOrder
@@ -589,7 +647,7 @@ export class ActivityDetailComponent implements OnInit {
     }
   }
   
-  getCurrentPhoto() {
+  getCurrentPhoto(): ActivityPhoto | null {
     const photos = this.getAllPhotos();
     const index = this.currentPhotoIndex();
     if (index >= 0 && index < photos.length) {
@@ -597,9 +655,21 @@ export class ActivityDetailComponent implements OnInit {
       // Récupérer les données complètes de la photo depuis l'activité
       const activityData = this.activity();
       if (activityData?.photos && photo.id) {
-        return activityData.photos.find(p => p.id === photo.id);
+        const fullPhoto = activityData.photos.find(p => p.id === photo.id);
+        if (fullPhoto) {
+          return fullPhoto;
+        }
       }
-      return photo;
+      // Si on ne trouve pas la photo complète, retourner au moins les données de base avec des valeurs par défaut
+      return {
+        id: photo.id,
+        photoUrl: photo.photoUrl,
+        displayOrder: photo.displayOrder || 0,
+        createdAt: '',
+        likeCount: 0,
+        hasLiked: false,
+        commentCount: 0
+      };
     }
     return null;
   }

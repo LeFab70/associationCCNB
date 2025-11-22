@@ -17,7 +17,7 @@ public interface ProposalRepository extends JpaRepository<Proposal, Long> {
     @Query("SELECT p FROM Proposal p WHERE p.isActive = true ORDER BY p.createdAt DESC")
     List<Proposal> findAllActiveOrderByCreatedAtDesc();
     
-    @Query("SELECT p FROM Proposal p WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR LOWER(p.proposalText) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
+    @Query("SELECT p FROM Proposal p WHERE (LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR LOWER(p.proposalText) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) AND p.isActive = true")
     List<Proposal> findByNameContainingIgnoreCaseOrProposalTextContainingIgnoreCase(@Param("searchTerm") String searchTerm);
 }
 

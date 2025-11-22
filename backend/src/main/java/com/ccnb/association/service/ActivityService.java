@@ -5,6 +5,7 @@ import com.ccnb.association.dto.ActivityPhotoDTO;
 import com.ccnb.association.entity.Activity;
 import com.ccnb.association.entity.ActivityLike;
 import com.ccnb.association.entity.ActivityPhoto;
+import com.ccnb.association.exceptions.ResourceNotFoundException;
 import com.ccnb.association.repository.ActivityLikeRepository;
 import com.ccnb.association.repository.ActivityPhotoRepository;
 import com.ccnb.association.repository.ActivityPhotoLikeRepository;
@@ -38,7 +39,9 @@ public class ActivityService {
     public ActivityDTO createActivity(String title, String description, String programme, String lieu, 
                                      java.time.LocalDate dateActivite, String heureActivite, 
                                      Boolean isFree, Double prix, Boolean reservationRequired, 
-                                     String reservationUrl, MultipartFile image, String imageUrl, 
+                                     String reservationUrl, Boolean isPublished, 
+                                     java.time.LocalDateTime votingDeadline,
+                                     MultipartFile image, String imageUrl, 
                                      List<MultipartFile> photos) {
         Activity activity = new Activity();
         activity.setTitle(title);
@@ -51,6 +54,8 @@ public class ActivityService {
         activity.setPrix(prix);
         activity.setReservationRequired(reservationRequired != null ? reservationRequired : false);
         activity.setReservationUrl(reservationUrl);
+        activity.setIsPublished(isPublished != null ? isPublished : false);
+        activity.setVotingDeadline(votingDeadline);
         
         if (image != null && !image.isEmpty()) {
             String fileName = fileStorageService.storeFile(image);
@@ -82,7 +87,7 @@ public class ActivityService {
     @Transactional
     public ActivityPhotoDTO addPhotoToActivity(Long activityId, MultipartFile photo, Integer displayOrder) {
         Activity activity = activityRepository.findById(activityId)
-                .orElseThrow(() -> new RuntimeException("Activity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Activity not found"));
         
         String fileName = fileStorageService.storeFile(photo);
         ActivityPhoto activityPhoto = new ActivityPhoto();
@@ -133,20 +138,20 @@ public class ActivityService {
     @Transactional(readOnly = true)
     public ActivityDTO getActivityById(Long id, String voterIp) {
         Activity activity = activityRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Activity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Activity not found"));
         return convertToDTO(activity, voterIp);
     }
     
     @Transactional
     public ActivityDTO toggleLike(Long activityId, String voterIp) {
         Activity activity = activityRepository.findById(activityId)
-                .orElseThrow(() -> new RuntimeException("Activity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Activity not found"));
         
         boolean hasLiked = activityLikeRepository.existsByActivityAndVoterIp(activity, voterIp);
         
         if (hasLiked) {
             ActivityLike like = activityLikeRepository.findByActivityAndVoterIp(activity, voterIp)
-                    .orElseThrow(() -> new RuntimeException("Like not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Like not found"));
             activityLikeRepository.delete(like);
         } else {
             ActivityLike like = new ActivityLike();
@@ -156,7 +161,7 @@ public class ActivityService {
         }
         
         activity = activityRepository.findById(activityId)
-                .orElseThrow(() -> new RuntimeException("Activity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Activity not found"));
         
         return convertToDTO(activity, voterIp);
     }
@@ -169,7 +174,7 @@ public class ActivityService {
     @Transactional
     public void toggleActivityStatus(Long id) {
         Activity activity = activityRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Activity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Activity not found"));
         activity.setIsActive(!activity.getIsActive());
         activityRepository.save(activity);
     }
@@ -178,7 +183,7 @@ public class ActivityService {
     public void publishActivity(Long id) {
         // Publier une activité (passer de proposée à publiée)
         Activity activity = activityRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Activity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Activity not found"));
         activity.setIsPublished(true);
         activityRepository.save(activity);
     }
@@ -187,7 +192,7 @@ public class ActivityService {
     public void unpublishActivity(Long id) {
         // Dépublier une activité (passer de publiée à proposée)
         Activity activity = activityRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Activity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Activity not found"));
         activity.setIsPublished(false);
         activityRepository.save(activity);
     }
@@ -260,7 +265,10 @@ public class ActivityService {
             activity.getIsPublished() != null ? activity.getIsPublished() : false,
             photos,
             reviewCount,
-            commentCount
+            commentCount,
+            null, // markedAsPastAt (pas encore implémenté dans l'entité)
+            null, // autoDeleteDelayDays (pas encore implémenté dans l'entité)
+            activity.getVotingDeadline()
         );
     }
     
